@@ -1,0 +1,135 @@
+---
+title: "Data Visualization with R Part 1 - Rizky Aditya Tara"
+author: "Rizky Aditya Tara"
+date: "5/24/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+# Load library untuk membaca file (readr) dan membuat grafik (ggplot2)
+
+library(tidyverse)
+```
+
+```{r}
+# Import file
+
+Data1 <- read.csv("Insurance_Loss (1).csv")
+
+# Melihat file, agar knit tidak terlalu panjang saya pakai fungsi head
+
+head(Data1)
+
+glimpse(Data1)
+```
+
+```{r}
+# Melakukan pengecekan summary statistik
+# Terdapat perbedaan median dan mean yang signifikan di "Losses"
+
+summary(Data1)
+```
+
+```{r}
+# Melihat apakah terdapat missing value
+
+library(naniar)
+
+miss_var_summary(Data1)
+```
+
+```{r}
+# Menghitung data berdasarkan "Policy.Number"
+# Tidak ada "Policy.Number" yg membuat klaim lebih dari 1x
+
+Data1 %>% 
+  count(Policy.Number) %>%
+  filter(n > 1)
+```
+
+```{r}
+# Berdasarkan kelas Day 7 (statistik) jika terdapat perbedaan nilai median dan mean yang signifikan, hal ini menandakan ada sesuatu yg "aneh" dengan datanya, dan pemusatan data tidak ditengah
+# Untuk mencari masalah dan memahami data, dilakukan visualisasi
+
+# Soal no 3
+# Viz 1 / Insight 1 :
+# Hasil histogram menunjukkan terdapat skewed distribution dengan kemiringan ke kanan (positif) yang berarti nilai mean > median > modus
+
+hist(Data1$Losses, main = "Losses Data Visualization", xlab="Losses", ylab="Frequency", col = "darkcyan")
+
+ggplot(data = Data1, mapping = aes(x = Losses)) + geom_histogram(colour="black", fill = "darkcyan") + labs(title = "Losses Data Visualization")
+```
+
+```{r}
+# Perhitungan korelasi untuk melihat korelasi antar variabel
+# Terdapat korelasi positif antara "Years.of.Driving.Experience" dengan "Age"
+# Terdapat beberapa korelasi negatif, dengan nilai ternegatif antara "Losses" dengan "Age"
+
+cor(Data1[, c("Age", "Years.of.Driving.Experience", "Vehicle.Age", "Losses")])
+```
+
+```{r}
+# Dari perhitungan korelasi, dilakukan visualisasi untuk lebih memahami data dan korelasi, perhitungan berikut mengambil variabel yang mempunyai korelasi positif tertinggi dan negatif tertinggi
+
+# Soal no 3
+# Viz 2 / Insight 2 :
+
+# Hasil visualisasi 2a : Korelasi positif antara variabel "Age" dengan "Years.of.Driving.Experience" menunjukkan bahwa semakin tinggi "Age" semakin tinggi "Years.of.Driving.Experience"
+
+ggplot(data = Data1) + geom_point(mapping = aes(x = Age, y = Years.of.Driving.Experience)) + labs(title = "Age and Years.of.Driving.Experience Correlation (Scatter Plot)")
+
+# Hasil visualisasi 2b : Kepadatan data variabel "Age" dengan "Losses" membuat hubungan variabelnya tidak dapat tergambarkan dengan geom_point
+
+ggplot(data = Data1) + geom_point(mapping = aes(x = Age, y = Losses)) + labs(title = "Age and Losses Correlation (Scatter Plot)")
+
+# Hasil visualisasi 2c : Visualisasi 2b (geom_point) dirubah menjadi geom_bar, hubungan antara variabel dapat tergambar dengan jelas, hasil menunjukkan bahwa semakin tinggi "Age" maka semakin rendah "Losses"
+
+ggplot(data = Data1) + geom_bar(mapping = aes(x = Age, y = Losses), stat = "identity", fill = "darkcyan") + labs(title = "Age and Losses Correlation (Bar Plot)")
+```
+
+```{r}
+# Dari hasil visualisasi 2c, didapat bahwa terdapat perbedaan "Losses" yang signifikan antara 2 kelompok umur yaitu <=25 dan >25
+# Dilakukan pemisahan kelompok umur dengan menggunakan fungsi cut
+
+# Soal no 3
+# Viz 3 / Insight 3 :
+
+# Hasil visualisasi 3a : Nilai median "Up to 25" lebih tinggi yang berarti terdapat lebih banyak losses namun karena letaknya tidak diluar boxplot "More than 25" perbedaannya tidak signifikan, adanya overlap pada kedua boxplot berarti tidak dapat disimpulkan bahwa losses satu kelompok lebih besar dari kelompok lain
+
+AgeLabel = c("Up to 25", "More than 25")
+Data1$AgeGroup = cut(Data1$Age, breaks = c(0, 25, Inf), labels = AgeLabel, right = FALSE)
+ggplot(data = Data1, mapping = aes(x = AgeGroup, y = Losses)) + geom_boxplot(notch = TRUE) + labs(title = "Losses by Age Group")
+
+# Hasil visualisasi 3b : Jitter plot menunjukkan densitas persebaran data dalam bentuk scatterplot, secara kasat mata terlihat bahwa persebaran "More than 25" lebih uniform dibandingkan "Up to 25"
+
+Data1 %>%
+  ggplot(aes(x = AgeGroup, y = Losses)) + geom_jitter(color = "darkcyan", alpha = 0.5) + geom_boxplot(alpha = 0) + labs(title = "Losses by Age Group (Jitter Plot)")
+
+# Hasil visualisasi 3c : Violin plot menunjukkan keseluruhan distribusi data, terlihat dari bentuk grafik yang lebar disamping dan tidak meruncing menunjukkan bahwa data tidak terkonsentrasi di sekitar median
+
+Data1 %>%
+  ggplot(aes(x = AgeGroup, y = Losses)) + geom_violin(color = "darkcyan", alpha = 0.5) + labs(title = "Losses by Age Group (Violin Plot)") + stat_summary(fun = mean, geom = "point", color = "darkorange3") + stat_summary(fun = median, geom = "point", color = "black")
+```
+
+```{r}
+# Summary Soal No 3
+# Langkah kerja :
+# 1. Load library readr dan load file csv
+# 2. Melihat file csv, summary statistik
+# 3. Melihat apakah ada perbedaan mean dan median yang signifikan
+# 4. Memvisualisasikan data yang signifikan
+# 5. Uji korelasi
+# 6. Memvisualisasikan hasil uji korelatif baik positif dan negatif
+# 7. Penjelasan / insight untuk setiap grafik
+```
+
+```{r}
+# Soal no 4
+# Membuat grafik seperti soal
+
+Data1 %>%
+  ggplot(data = Data1, mapping = aes(x = Gender, y = Age, color = Gender)) + geom_boxplot()
+```
+
